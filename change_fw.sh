@@ -13,6 +13,7 @@ echo "8: set up POSTROUTING"
 echo "9: list fw.sh"
 echo "10 set up DEFAULT fw.sh and install iptables with conntrack"
 echo "IT IS RECOMMENDED TO EXECUTE STEP 10 TO START USING THE SCRIPT!"
+echo "be ensure that net.ipv4.ip_forward = is an correct"
 echo ""
 
 echo "You need chose a number"
@@ -316,7 +317,7 @@ if [[ $action == "1" ]] || [[ $action == "2" ]] || [[ $action == "3" ]] || [[ $a
 				echo "Enter wan machine's port"
 				read wan_port
 				if  [[ $wan_port -ge 1 ]] && [[ $wan_port -le 65535 ]] ; then
-					var_port_wan="$wam_port"
+					var_port_wan="$wan_port"
 				elif [[ $wan_port -lt 0 ]]; then
 					echo " Port entered incorrectly "
 						exit 0
@@ -354,9 +355,21 @@ if [[ $action == "1" ]] || [[ $action == "2" ]] || [[ $action == "3" ]] || [[ $a
 					echo "iptables -t nat -A POSTROUTING -o $wan_interface -s $local_net -j SNAT --to-source $white_ip" >> /root/fw.sh
 					echo "SNAT has been set up"
 				elif [[ $chose -eq 2 ]]; then
-					echo "Enter wan interface"
-					read wan_interface
-					echo "iptables -t nat -A POSTROUTING -o $wan_interface -j MASQUERADE" >> /root/fw.sh
+					get_interface_for_ip() {
+						target_ip="$1"
+    					interface=$(ip -o -4 route get "$target_ip" | awk '{print $5}')
+						echo "$interface"
+						}
+						target_ip="8.8.8.8"
+						selected_interface=$(get_interface_for_ip "$target_ip")
+
+						if [ -n "$selected_interface" ]; then
+							echo "The interface for $target_ip is: $selected_interface"
+						else
+							echo "Unable to determine the interface for $target_ip"
+							exit 0
+						fi
+					echo "iptables -t nat -A POSTROUTING -o $selected_interface -j MASQUERADE" >> /root/fw.sh
 					echo "MASQUERADE has been set up"
 				else
 					echo "you must print 1 or 2, try again.. "
@@ -440,4 +453,3 @@ EOF
 	else
 		echo "you can print only 1 or 2 or 3 or 4 or 5 or 6 or 7 or 9 or 10"
 fi
-
